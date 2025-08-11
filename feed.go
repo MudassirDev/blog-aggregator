@@ -36,3 +36,14 @@ func handleAddFeed(s *state, cmd command) error {
 	fmt.Println(feed)
 	return nil
 }
+
+func handleGetFeeds(s *state, cmd command) error {
+	feeds, err := s.db.GetAllFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to retrieve feeds: %v", err)
+	}
+	for _, feed := range feeds {
+		fmt.Printf("feed: %v, user: %v\n", feed.Name, feed.Username)
+	}
+	return nil
+}

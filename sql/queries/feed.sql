@@ -15,3 +15,6 @@ INSERT INTO feed (
   $6
 )
 RETURNING *;
+
+-- name: GetAllFeeds :many
+SELECT feed.*, users.name AS username FROM feed JOIN users ON user_id = users.id;
