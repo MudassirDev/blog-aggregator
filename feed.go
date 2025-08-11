@@ -102,3 +102,26 @@ func handleFollowing(s *state, cmd command) error {
 
 	return nil
 }
+
+func handleUnfollow(s *state, cmd command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <url>", cmd.Name)
+	}
+	url := cmd.Args[0]
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("failed to get current user: %v", err)
+	}
+
+	feed, err := s.db.GetFeedWithUrl(context.Background(), url)
+
+	err = s.db.Unfollow(context.Background(), database.UnfollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to unfollow feed: %v", err)
+	}
+
+	return nil
+}
