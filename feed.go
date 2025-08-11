@@ -9,18 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-func handleAddFeed(s *state, cmd command) error {
+func handleAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		return fmt.Errorf("usage: %s <name> <url>", cmd.Name)
 	}
 
 	feedName := cmd.Args[0]
 	feelUrl := cmd.Args[1]
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("user not logged in: %v", err)
-	}
 
 	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -59,7 +54,7 @@ func handleGetFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handleFollowFeed(s *state, cmd command) error {
+func handleFollowFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("usage: %s <url>", cmd.Name)
 	}
@@ -67,10 +62,6 @@ func handleFollowFeed(s *state, cmd command) error {
 	feed, err := s.db.GetFeedWithUrl(context.Background(), url)
 	if err != nil {
 		return fmt.Errorf("no such field exists: %v", err)
-	}
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to get current user: %v", err)
 	}
 	_, err = s.db.FollowFeed(context.Background(), database.FollowFeedParams{
 		ID:        uuid.New(),
@@ -85,12 +76,7 @@ func handleFollowFeed(s *state, cmd command) error {
 	return nil
 }
 
-func handleFollowing(s *state, cmd command) error {
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to get current user: %v", err)
-	}
-
+func handleFollowing(s *state, cmd command, user database.User) error {
 	feeds, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get following: %v", err)
@@ -103,15 +89,11 @@ func handleFollowing(s *state, cmd command) error {
 	return nil
 }
 
-func handleUnfollow(s *state, cmd command) error {
+func handleUnfollow(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("usage: %s <url>", cmd.Name)
 	}
 	url := cmd.Args[0]
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to get current user: %v", err)
-	}
 
 	feed, err := s.db.GetFeedWithUrl(context.Background(), url)
 
