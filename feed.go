@@ -2,63 +2,37 @@ package main
 
 import (
 	"context"
-	"encoding/xml"
-	"html"
-	"io"
-	"net/http"
+	"fmt"
 	"time"
+
+	"github.com/MudassirDev/blog-aggregator/internal/database"
+	"github.com/google/uuid"
 )
 
-type RSSFeed struct {
-	Channel struct {
-		Title       string    `xml:"title"`
-		Link        string    `xml:"link"`
-		Description string    `xml:"description"`
-		Item        []RSSItem `xml:"item"`
-	} `xml:"channel"`
-}
-
-type RSSItem struct {
-	Title       string `xml:"title"`
-	Link        string `xml:"link"`
-	Description string `xml:"description"`
-	PubDate     string `xml:"pubDate"`
-}
-
-func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
-	httpClient := http.Client{
-		Timeout: 10 * time.Second,
+func handleAddFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 2 {
+		return fmt.Errorf("usage: %s <name> <url>", cmd.Name)
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
+
+	feedName := cmd.Args[0]
+	feelUrl := cmd.Args[1]
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("user not logged in: %v", err)
 	}
 
-	req.Header.Set("User-Agent", "gator")
-	resp, err := httpClient.Do(req)
+	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Url:       feelUrl,
+		Name:      feedName,
+		UserID:    user.ID,
+	})
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to create the feed: %v", err)
 	}
-	defer resp.Body.Close()
-
-	dat, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var rssFeed RSSFeed
-	err = xml.Unmarshal(dat, &rssFeed)
-	if err != nil {
-		return nil, err
-	}
-
-	rssFeed.Channel.Title = html.UnescapeString(rssFeed.Channel.Title)
-	rssFeed.Channel.Description = html.UnescapeString(rssFeed.Channel.Description)
-	for i, item := range rssFeed.Channel.Item {
-		item.Title = html.UnescapeString(item.Title)
-		item.Description = html.UnescapeString(item.Description)
-		rssFeed.Channel.Item[i] = item
-	}
-
-	return &rssFeed, nil
+	fmt.Println(feed)
+	return nil
 }
