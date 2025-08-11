@@ -33,7 +33,18 @@ func handleAddFeed(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create the feed: %v", err)
 	}
-	fmt.Println(feed)
+
+	_, err = s.db.FollowFeed(context.Background(), database.FollowFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to follow feed: %v", err)
+	}
+
 	return nil
 }
 
@@ -45,5 +56,49 @@ func handleGetFeeds(s *state, cmd command) error {
 	for _, feed := range feeds {
 		fmt.Printf("feed: %v, user: %v\n", feed.Name, feed.Username)
 	}
+	return nil
+}
+
+func handleFollowFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <url>", cmd.Name)
+	}
+	url := cmd.Args[0]
+	feed, err := s.db.GetFeedWithUrl(context.Background(), url)
+	if err != nil {
+		return fmt.Errorf("no such field exists: %v", err)
+	}
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("failed to get current user: %v", err)
+	}
+	_, err = s.db.FollowFeed(context.Background(), database.FollowFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to follow feed: %v", err)
+	}
+	return nil
+}
+
+func handleFollowing(s *state, cmd command) error {
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("failed to get current user: %v", err)
+	}
+
+	feeds, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get following: %v", err)
+	}
+
+	for _, feed := range feeds {
+		fmt.Println(feed.FeedName)
+	}
+
 	return nil
 }
